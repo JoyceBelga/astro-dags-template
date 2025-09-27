@@ -112,7 +112,7 @@ def fetch_fixed_range_and_to_bq():
 # DAG (roda uma única vez)
 # =========================
 @dag(
-    dag_id="openfda_mcb2_test_range",
+    dag_id="openfda_jb",
     default_args=DEFAULT_ARGS,
     schedule="@once",  # executa uma vez ao habilitar/triggerar
     start_date=pendulum.datetime(2025, 9, 23, tz="UTC"),
