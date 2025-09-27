@@ -120,7 +120,7 @@ def fetch_fixed_range_and_to_bq():
     max_active_runs=1,
     tags=["openfda", "bigquery", "test", "range"],
 )
-def openfda_pipeline_test_range():
+def openfda_jb():
     fetch_fixed_range_and_to_bq()
 
-dag = openfda_pipeline_test_range()
+dag = openfda_jb()
