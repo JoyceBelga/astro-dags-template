@@ -16,7 +16,7 @@ BQ_DATASET  = "fdadataset"                    # seu dataset
 BQ_TABLE    = "openfda_sildenafil_range_test" # tabela alvo
 BQ_LOCATION = "US"                            # região do dataset (igual ao dataset)
 GCP_CONN_ID = "google_cloud_default"          # conexão GCP no Airflow
-DRUG_QUERY  = "sildenafil"                    # patient.drug.medicinalproduct
+DRUG_QUERY  = "Ozempic"                       # patient.drug.medicinalproduct
 USE_POOL    = True                            # usar pool p/ limitar concorrência
 POOL_NAME   = "openfda_api"                   # nome do pool criado
 
