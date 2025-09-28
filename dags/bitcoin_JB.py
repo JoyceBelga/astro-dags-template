@@ -55,40 +55,42 @@ def _http_get_json(url: str) -> dict:
 # =========================
 @task(retries=0)
 def fetch_last_6m_and_to_bq():
-    """
-    Baixa as cotações diárias USD para ~180 dias (últimos 6 meses) e grava no BigQuery.
-    """
     url = _build_coingecko_url_last_6m()
     data = _http_get_json(url)
     prices = data.get("prices", [])
-
     if not prices:
         print("Nenhum dado retornado pela API.")
         return
 
-    # prices: lista de [timestamp_ms, price_float]
+    # prices: [[ts_ms, price], ...]
     df = pd.DataFrame(prices, columns=["ts_ms", "price_usd"])
-    df["quote_date"] = pd.to_datetime(df["ts_ms"], unit="ms", utc=True).dt.date  # DATE
-    etl_time = pendulum.now("UTC").to_datetime_string()
 
-    # janela usada (aprox. últimos 180 dias até hoje-1)
-    end_day = (pendulum.now("UTC") - timedelta(days=1)).date()
+    # TIPOS CORRETOS ↓
+    df["price_usd"]  = pd.to_numeric(df["price_usd"], errors="coerce")
+    df["quote_date"] = pd.to_datetime(df["ts_ms"], unit="ms", utc=True).dt.date  # DATE puro
+
+    # janela (~180 dias até ontem)
+    end_day   = (pendulum.now("UTC") - timedelta(days=1)).date()
     start_day = end_day - timedelta(days=179)
 
+    # TIMESTAMP real (não string)
+    etl_time = pd.Timestamp.now(tz="UTC")  # datetime64[ns, UTC]
+
+    # monta dataframe final SÓ com as colunas do schema
     df = df.assign(
-        time=etl_time,         # TIMESTAMP do ETL
-        win_start=start_day,   # início da janela
-        win_end=end_day,       # fim da janela
+        time=etl_time,          # TIMESTAMP
+        win_start=start_day,    # DATE
+        win_end=end_day,        # DATE
         asset="BTC-USD",
         source="CoinGecko",
     )[["quote_date", "price_usd", "time", "win_start", "win_end", "asset", "source"]]
 
-    # Envia ao BigQuery
+    # envia ao BigQuery
     hook = BigQueryHook(gcp_conn_id=GCP_CONN_ID, location=BQ_LOCATION, use_legacy_sql=False)
     df.to_gbq(
         destination_table=f"{BQ_DATASET}.{BQ_TABLE}",
         project_id=GCP_PROJECT,
-        if_exists="append",  # atenção: reprocessar no mesmo dia pode duplicar
+        if_exists="append",
         credentials=hook.get_credentials(),
         table_schema=[
             {"name": "quote_date", "type": "DATE"},
@@ -104,7 +106,6 @@ def fetch_last_6m_and_to_bq():
     )
 
     print(f"[OK] Inseridos {len(df)} dias em {GCP_PROJECT}.{BQ_DATASET}.{BQ_TABLE} ({start_day} → {end_day})")
-
 
 # =========================
 # DAG (uma execução única, estilo exercício)
